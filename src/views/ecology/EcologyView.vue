@@ -31,7 +31,7 @@
             <span>生态建模</span>
           </template>
           <el-menu-item-group>
-            <el-menu-item index="3-1">实体标注</el-menu-item>
+            <el-menu-item index="3-1">数据映射</el-menu-item>
             <el-menu-item index="3-2">关系标注</el-menu-item>
           </el-menu-item-group>
         </el-submenu>
@@ -50,7 +50,8 @@
     <template>
       <NavMenu v-if="index == '1'"></NavMenu>
       <ConMana v-if="index == '2-1'"></ConMana>
-      <EntityAnno v-if="index == '3-1'"></EntityAnno>
+<!--      <EntityAnno v-if="index == '3-1'"></EntityAnno>-->
+      <DataMap v-if="index == '3-1'"></DataMap>
     </template>
   </div>
 </template>
@@ -59,9 +60,10 @@
 import NavMenu from '@/components/ecology/NavMenu'
 import ConMana from '@/components/ecology/ConMana'
 import EntityAnno from '@/components/ecology/EntityAnno'
+import DataMap from '@/components/ecology/DataMap'
 export default {
   name: 'EcologyView',
-  components: { EntityAnno, ConMana, NavMenu },
+  components: { DataMap, EntityAnno, ConMana, NavMenu },
   data () {
     return {
       url: require('@/assets/back.png'),
