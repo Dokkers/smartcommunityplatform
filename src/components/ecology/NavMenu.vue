@@ -1,68 +1,160 @@
 <template>
   <div>
     <div class="header">
-      <div class="pro_title">项目管理</div>
-      <el-button class="project_btn" type="text" size="medium" icon="el-icon-s-grid" @click="index = 1">项目</el-button>
-      <el-button class="project_btn" type="text" size="medium" icon="el-icon-circle-plus" @click="index = 2">创建</el-button>
-      <el-button class="project_btn" type="text" size="medium" icon="el-icon-upload" @click="index = 3">导入</el-button>
-    </div>
+      <div class="pro_title">生态模型管理</div>
+   </div>
     <div class="main">
-      <template v-if="index == 1">
-        <el-input class="pro_search" placeholder="请输入内容" suffix-icon="el-icon-search" v-model="input1"></el-input>
+      <template>
+        <div style="width: 54vw">
+          <el-input class="pro_search" placeholder="请输入内容" suffix-icon="el-icon-search" v-model="inputSearch" @keyup.enter.native="handleSearchIconClick"></el-input>
+          <el-button type="success" style="float: right;margin-top: 10px" icon="el-icon-circle-plus" @click="buildProjectVisible = true, disabled = false">创建</el-button>
+        </div>
         <el-scrollbar style="height: 100%">
-          <div class="project">
-            <div>
+          <div class="project" v-for="(mProject, index) in projectList" :key="index">
+            <div style="font-size: 17px;margin-top: 5px">
               <i class="el-icon-folder"></i>
-              长三角智慧社区<br>D:\Code\IDEA\smartcommunityplatform
+              {{ mProject.name }}
+<!--              <br>{{ mProject.path }}-->
             </div>
             <el-button-group>
-              <el-button type="primary" size="medium" icon="el-icon-edit"></el-button>
-              <el-button type="primary" size="medium" icon="el-icon-delete"></el-button>
+              <el-button type="primary" size="medium" icon="el-icon-edit" @click="handleEdit(index)"></el-button>
+              <el-button type="danger" size="medium" icon="el-icon-delete" @click="handleDelete(index)"></el-button>
             </el-button-group>
           </div>
+          <el-dialog title="创建生态模型" :visible.sync="buildProjectVisible" width="30%" :before-close="handleClose">
+            <el-form ref="buildForm" :model="buildForm" label-width="100px">
+              <el-form-item label="生态模型名：" prop="name">
+                <el-input v-model="buildForm.name" size="medium" clearable></el-input>
+              </el-form-item>
+              <el-form-item label="数据库名：" prop="database">
+                <el-input v-model="buildForm.database" size="medium" clearable :disabled="disabled"></el-input>
+              </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+              <el-button size="medium" @click="handleCancel">取 消</el-button>
+              <el-button size="medium" type="primary" @click="handleBuild">确 定</el-button>
+          </span>
+          </el-dialog>
         </el-scrollbar>
-      </template>
-      <template v-if="index == 2">
-        <el-card class="box-card">
-          <div slot="header" class="clearfix">
-            <span>D:\Code</span>
-            <el-button style="float: right;padding: 0px 0;font-size: 16px;" type="text" size="small" icon="el-icon-edit">编辑路径</el-button>
-          </div>
-          <el-scrollbar style="height: 500px;">
-            <div v-for="o in 1" :key="o" class="text item">
-              <i class="el-icon-folder"></i>
-              {{'smartcommunityplatform' + o }}
-            </div>
-          </el-scrollbar>
-        </el-card>
-        <el-button type="success" icon="el-icon-plus" style="margin-top: 10px;">在此创建项目</el-button>
-      </template>
-      <template v-if="index == 3">
-        <el-card class="box-card">
-          <div slot="header" class="clearfix">
-            <span>D:\Code</span>
-            <el-button style="float: right;padding: 0px 0;font-size: 16px;" type="text" size="small" icon="el-icon-edit">编辑路径</el-button>
-          </div>
-          <el-scrollbar style="height: 500px;">
-            <div v-for="o in 0" :key="o" class="text item">
-              {{'列表内容 ' + o }}
-            </div>
-          </el-scrollbar>
-        </el-card>
-        <el-button type="success" icon="el-icon-upload2" style="margin-top: 10px;" :disabled="true">导入此文件夹</el-button>
       </template>
     </div>
   </div>
 </template>
 
 <script>
+import { getProjectList, saveProjectList } from '@/apis/ecology/project'
+
 export default {
   name: 'NavMenu',
   data () {
     return {
-      index: '0',
-      input1: ''
+      inputSearch: '',
+      buildProjectVisible: false,
+      curIndex: -1,
+      disabled: false,
+      projectList: [
+        {
+          name: '长三角智慧社区',
+          path: 'D:\\Store\\smartcommunity\\Project'
+        },
+        {
+          name: '济宁社区',
+          path: 'D:\\Store\\smartcommunity\\Project'
+        }
+      ],
+      buildForm: {
+        name: '',
+        database: ''
+      }
     }
+  },
+  methods: {
+    init () {
+      getProjectList().then(res => {
+        this.projectList = res.data
+        this.$notify.success({
+          title: '成功',
+          message: '生态模型列表加载'
+        })
+      })
+    },
+    handleSearchIconClick () {
+      const target = this.projectList.find(item => item.name === this.inputSearch)
+      if (target) {
+        const name = this.inputSearch
+        this.projectList.sort(function (lhs) {
+          return lhs.name !== name
+        })
+        this.$notify.success({
+          title: '消息',
+          message: '查找成功'
+        })
+      } else {
+        this.$notify.info({
+          title: '消息',
+          message: '查找失败'
+        })
+      }
+    },
+    handleClose (done) {
+      this.$refs.buildForm.resetFields()
+      done()
+    },
+    handleBuild () {
+      const tmpData = {
+        name: this.buildForm.name,
+        database: this.buildForm.database
+      }
+      if (this.curIndex === -1) {
+        const copyProject = [...this.projectList]
+        copyProject.push(tmpData)
+        saveProjectList(copyProject, this.buildForm.database).then(res => {
+          if (res.data.msg === 'success') {
+            this.$notify.success({
+              title: '成功'
+            })
+            this.projectList.push(tmpData)
+          } else {
+            this.$notify.error({
+              title: res.data.msg
+            })
+          }
+        })
+      } else {
+        this.projectList[this.curIndex] = tmpData
+        saveProjectList(this.projectList).then(res => {
+          this.$notify.success({
+            title: '成功'
+          })
+        })
+      }
+
+      this.curIndex = -1
+      this.$refs.buildForm.resetFields()
+      this.buildProjectVisible = false
+    },
+    handleCancel () {
+      this.$refs.buildForm.resetFields()
+      this.buildProjectVisible = false
+    },
+    handleEdit (index) {
+      this.disabled = true
+      this.curIndex = index
+      this.buildForm.name = this.projectList[index].name
+      this.buildForm.database = this.projectList[index].database
+      this.buildProjectVisible = true
+    },
+    handleDelete (index) {
+      this.projectList.splice(index, 1)
+      saveProjectList(this.projectList).then(res => {
+        this.$notify.success({
+          title: '删除成功'
+        })
+      })
+    }
+  },
+  mounted () {
+    this.init()
   }
 }
 </script>
@@ -70,7 +162,7 @@ export default {
 <style scoped>
 .header{
   width: 85vw;
-  height: 15vh;
+  height: 10vh;
   background-color: #e3e3e3;
   text-align: center;
 }
@@ -81,7 +173,7 @@ export default {
 }
 .main{
   width: 85vw;
-  height: 85vh;
+  height: 90vh;
   background-color: #f6f5f5;
   display: flex;
   align-items: center;
@@ -117,6 +209,7 @@ export default {
   margin-top: 10px;
   width: 400px;
   cursor: text;
+  margin-right: 100px;
 }
 .el-button-group{
   position: absolute;

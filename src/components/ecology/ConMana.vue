@@ -5,23 +5,26 @@
     </div>
     <div class="main">
       <div class="mod_header">
-        <el-input class="mod_search" placeholder="请输入内容" suffix-icon="el-icon-search" v-model="input1"></el-input>
+        <el-input class="mod_search" placeholder="请输入内容" suffix-icon="el-icon-search" v-model="inputSearch" @keyup.enter.native="handleSearchIconClick">
+        </el-input>
         <el-button class="build-btn" type="primary" icon="el-icon-circle-plus-outline" @click="buildDialogVisible = true">创建模型</el-button>
+<!--        <el-button class="build-btn" type="success" icon="el-icon-s-grid" @click="handleViewALl">所有模型</el-button>-->
         <el-dialog title="创建图模型" :visible.sync="buildDialogVisible" width="30%" :before-close="handleClose">
           <el-form ref="buildForm" :model="buildForm" label-width="100px">
             <el-form-item label="名称：" prop="name">
-              <el-input v-model="buildForm.name" clearable></el-input>
+              <el-input v-model="buildForm.name" size="medium" clearable></el-input>
             </el-form-item>
             <el-form-item label="创建者：" prop="builder">
-              <el-input v-model="buildForm.builder" clearable></el-input>
+              <el-input v-model="buildForm.builder" size="medium" clearable></el-input>
             </el-form-item>
             <el-form-item label="创建时间：" prop="date">
-              <el-date-picker type="date" placeholder="选择日期" v-model="buildForm.date" style="width: 100%;"></el-date-picker>
+              <el-date-picker type="date" placeholder="选择日期" format="yyyy 年 MM 月 dd 日"
+                              value-format="yyyy-MM-dd" v-model="buildForm.date" size="medium" style="width: 100%;"></el-date-picker>
             </el-form-item>
           </el-form>
           <span slot="footer" class="dialog-footer">
-              <el-button @click="handleBuild('cancel')">取 消</el-button>
-              <el-button type="primary" @click="handleBuild('confirm')">确 定</el-button>
+              <el-button size="medium" @click="handleCancel">取 消</el-button>
+              <el-button type="primary" size="medium" @click="handleBuild">确 定</el-button>
             </span>
         </el-dialog>
       </div>
@@ -38,12 +41,13 @@
               </div>
               <div style="float: right;">
                 <el-dropdown trigger="click" size="medium">
-            <span class="el-dropdown-link">
-              <i class="el-icon-more"></i>
-            </span>
+                  <span class="el-dropdown-link">
+                    <i class="el-icon-more"></i>
+                  </span>
                   <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item>编辑</el-dropdown-item>
-                    <el-dropdown-item>删除</el-dropdown-item>
+                    <div @click="handleCardEdit(index)"><el-dropdown-item>编辑</el-dropdown-item></div>
+                    <div @click="handleCardCopy(index)"><el-dropdown-item>复制</el-dropdown-item></div>
+                    <div @click="handleCardDelete(index)"><el-dropdown-item>删除</el-dropdown-item></div>
                   </el-dropdown-menu>
                 </el-dropdown>
               </div>
@@ -56,33 +60,91 @@
 </template>
 
 <script>
+import { copyModelCard, getModelCard, saveModelCard } from '@/apis/ecology/modelcard'
+
 export default {
   name: 'ConMana',
   data () {
     return {
-      input1: '',
+      inputSearch: '',
       buildForm: {
         name: '',
         builder: '',
-        data: ''
+        date: ''
       },
       modelList: [{
         author: 'yuehualiu',
-        name: 'demo',
+        name: 'CSEM',
         create_time: '2022-12-05'
       }],
-      buildDialogVisible: false
+      buildDialogVisible: false,
+      curIndex: -1
     }
   },
   methods: {
+    init () {
+      this.handleViewALl()
+    },
+    handleSearchIconClick () {
+      const target = this.modelList.find(item => item.name === this.inputSearch)
+      if (target) {
+        const name = this.inputSearch
+        this.modelList.sort(function (lhs) {
+          return lhs.name !== name
+        })
+        this.$notify.success({
+          title: '消息',
+          message: '查找成功'
+        })
+      } else {
+        this.$notify.info({
+          title: '消息',
+          message: '查找失败'
+        })
+      }
+    },
     handleClose (done) {
       this.$refs.buildForm.resetFields()
       done()
     },
-    handleBuild (op) {
-      if (op === 'confirm') {
-        // TODO 模型卡片添加，后端接口链接
+    handleViewALl () {
+      this.curIndex = -1
+      getModelCard().then(res => {
+        this.modelList = res.data
+        this.$notify.success({
+          title: '成功',
+          message: '模型加载'
+        })
+      })
+    },
+    handleBuild () {
+      const tmpData = {
+        author: this.buildForm.builder,
+        name: this.buildForm.name,
+        create_time: this.buildForm.date
       }
+      if (this.curIndex === -1) {
+        this.modelList.push(tmpData)
+        saveModelCard(this.modelList).then(res => {
+          this.$notify.success({
+            title: '成功'
+          })
+        })
+      } else {
+        const oldName = this.modelList[this.curIndex].name
+        const newName = this.buildForm.name
+        this.modelList[this.curIndex] = tmpData
+        saveModelCard(this.modelList, oldName, newName).then(res => {
+          this.$notify.success({
+            title: '成功'
+          })
+        })
+      }
+      this.curIndex = -1
+      this.$refs.buildForm.resetFields()
+      this.buildDialogVisible = false
+    },
+    handleCancel () {
       this.$refs.buildForm.resetFields()
       this.buildDialogVisible = false
     },
@@ -93,7 +155,55 @@ export default {
           name: name
         }
       })
+    },
+    handleCardEdit (index) {
+      this.curIndex = index
+      this.buildForm.name = this.modelList[index].name
+      this.buildForm.builder = this.modelList[index].author
+      this.buildForm.date = this.modelList[index].create_time
+      this.buildDialogVisible = true
+    },
+    handleCardCopy (index) {
+      console.log(index)
+      const tmpData = {
+        author: this.modelList[index].author,
+        name: this.modelList[index].name + '(副本)',
+        create_time: this.modelList[index].create_time
+      }
+      this.modelList.push(tmpData)
+      saveModelCard(this.modelList).then(res => {
+        this.$notify.success({
+          title: '成功'
+        })
+      })
+      copyModelCard(this.modelList[index].name).then(res => {
+        this.$notify.success({
+          title: '成功'
+        })
+      })
+    },
+    handleCardDelete (index) {
+      this.$confirm('此操作将删除该元模型, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.modelList.splice(index, 1)
+        saveModelCard(this.modelList).then(res => {
+          this.$notify.success({
+            title: '删除成功'
+          })
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消删除'
+        })
+      })
     }
+  },
+  mounted () {
+    this.init()
   }
 }
 </script>
