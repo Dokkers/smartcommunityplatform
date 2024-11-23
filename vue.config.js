@@ -7,7 +7,8 @@ module.exports = defineConfig({
     port: 8000,
     proxy: { // 设置代理，必须填
       '/api': { // 设置拦截器  拦截器格式   斜杠+拦截器名字，名字可以自己定
-        target: 'http://localhost:5000',
+        // target: 'http://localhost:5000',
+        target: 'http://82.156.31.125:5000',
         changeOrigin: true, // 是否设置同源，输入是的
         pathRewrite: { // 路径重写
           '^/api': '' // 选择忽略拦截器里面的内容
